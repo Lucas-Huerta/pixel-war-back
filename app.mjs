@@ -67,6 +67,37 @@ io.on("connection", (socket) => {
   gameController.handleConnection(socket);
 });
 
+io.on("connection", (socket) => {
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    console.log(`User joined room: ${roomId}`);
+  });
+
+  socket.on("leaveRoom", (roomId) => {
+    socket.leave(roomId);
+    console.log(`User left room: ${roomId}`);
+  });
+
+  // WIP test
+  socket.on("getRoomUsers", (roomId) => {
+    const users = io.sockets.adapter.rooms.get(roomId);
+    const userCount = users ? users.size : 0;
+    socket.emit("roomUsers", { roomId, userCount });
+  });
+
+  socket.on("startGame", (roomId) => {
+    io.to(roomId).emit("gameStarted");
+  });
+
+  socket.on("endGame", (roomId) => {
+    io.to(roomId).emit("gameEnded");
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
+  });
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
