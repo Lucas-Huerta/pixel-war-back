@@ -6,13 +6,21 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.mjs"
+    "start": "nodemon app.mjs",
+    "migrate": "supabase migration",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "generate": "prisma generate"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^6.4.1",
+    "@supabase/supabase-js": "^2.49.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "nodemon": "^3.1.9",
+    "prisma": "^6.4.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {

@@ -1,7 +1,9 @@
 class RoomService {
   rooms = new Map();
 
-  createRoom(roomId) {
+  createRoom() {
+    const roomId = Math.random().toString(36).substr(2, 5);
+
     const room = {
       id: roomId,
       players: [],
@@ -17,6 +19,14 @@ class RoomService {
     if (!room || room.players.length === 0) return false;
 
     room.isGameStarted = true;
+    return true;
+  }
+
+  addPlayer(roomId, player) {
+    const room = this.rooms.get(roomId);
+    if (!room || room.isGameStarted) return false;
+
+    room.players.push(player);
     return true;
   }
   
