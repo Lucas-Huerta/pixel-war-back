@@ -85,6 +85,11 @@ io.on("connection", (socket) => {
     socket.emit("roomUsers", { roomId, userCount });
   });
 
+  socket.on("getRooms", () => {
+    const rooms = io.sockets.adapter.rooms;
+    socket.emit("getRooms", rooms);
+  });
+
   socket.on("startGame", (roomId) => {
     io.to(roomId).emit("gameStarted");
   });
