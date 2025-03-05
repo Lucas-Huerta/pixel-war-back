@@ -9,6 +9,7 @@ class RoomService {
       players: [],
       isGameStarted: false,
       grid: Array(100).fill(Array(100).fill(null)),
+      team: []
     };
     this.rooms.set(roomId, room);
     return room;
@@ -22,11 +23,34 @@ class RoomService {
     return true;
   }
 
-  addPlayer(roomId, player) {
+  createTeamInRoom(roomId, teamName) {
     const room = this.rooms.get(roomId);
-    if (!room || room.isGameStarted) return false;
+    if (!room) return false;
+
+    room.team.push({
+      name: teamName,
+      players: [],
+    });
+    return true;
+  }
+
+  addPlayerinRoom(roomId, player) {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
 
     room.players.push(player);
+    return true;
+  }
+
+  addPlayerInTeam(roomId, player) {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    const team = room.team.find((t) => t.id === player.teamId);
+    if (!team) return false;
+
+    team.players.push(player);
+    // room.players.push(player);
     return true;
   }
   

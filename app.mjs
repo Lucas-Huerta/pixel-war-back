@@ -18,8 +18,6 @@ const io = new Server(httpServer, {
 
 // Create a new room
 app.post("/api/room", (req, res) => {
-  console.log("Creating a new room");
-  
   const newRoom = roomService.createRoom();
   res.json(newRoom);
 });
@@ -28,6 +26,34 @@ app.get("/api/room/:roomId", (req, res) => {
   const room = roomService.getRoom(req.params.roomId);
   if (!room) return res.status(404).json({ error: "Room not found" });
   res.json(room);
+});
+
+app.post("/api/room/:roomId/team", (req, res) => {
+  const success = roomService.createTeamInRoom(req.params.roomId, req.body.name);
+  if (!success) return res.status(404).json({ error: "Room not found" });
+  res.json({ success });
+});
+
+app.post("/api/room/:roomId/player", (req, res) => {
+  const player = req.body;
+  const success = roomService.addPlayerinRoom(req.params.roomId, player);
+  if (!success) return res.status(404).json({ error: "Room not found" });
+  res.json({ success });
+});
+
+// Add a player to a team
+app.post("/api/room/:roomId/player", (req, res) => {
+  const player = req.body;
+  const success = roomService.addPlayerInTeam(req.params.roomId, player);
+  if (!success) return res.status(404).json({ error: "Room not found" });
+  res.json({ success });
+});
+
+// Start the game
+app.post("/api/room/:roomId/start", (req, res) => {
+  const success = roomService.startGame(req.params.roomId);
+  if (!success) return res.status(404).json({ error: "Room not found" });
+  res.json({ success });
 });
 
 app.get("/", (req, res) => {

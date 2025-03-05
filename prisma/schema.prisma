@@ -16,15 +16,26 @@ datasource db {
 
 // TODO revoir les schémas
 model Player {
-  id       String @id @default(uuid())
-  username String @unique
-  socketId String @unique
-  rooms    Room[] @relation("RoomToPlayer")
+  id       String  @id @default(uuid())
+  username String  @unique
+  socketId String  @unique
+  rooms    Room[]  @relation("RoomToPlayer")
+  Team     Team?   @relation(fields: [teamId], references: [id])
+  teamId   String?
+}
+
+model Team {
+  id      String   @id @default(uuid())
+  name    String
+  players Player[]
+  room    Room?    @relation(fields: [roomId], references: [id])
+  roomId  String?
 }
 
 model Room {
   id            String   @id @default(uuid())
   players       Player[] @relation("RoomToPlayer")
+  teams         Team[]
   isGameStarted Boolean  @default(false)
   grid          Json // Using Json type to store string[][]
 }

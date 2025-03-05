@@ -11,6 +11,7 @@ export class GameController {
         id: socket.id,
         username: data.username,
         socketId: socket.id,
+        teamId: data.teamId || null 
       };
 
       const success = roomService.addPlayer(data.roomId, player);
