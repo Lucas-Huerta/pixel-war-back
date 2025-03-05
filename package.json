@@ -5,8 +5,8 @@
   "main": "app.mjs",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.mjs",
+    "start": "node app.mjs",
+    "dev": "nodemon app.mjs",
     "migrate": "supabase migration",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
