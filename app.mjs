@@ -20,8 +20,8 @@ const io = new Server(httpServer, {
 app.post("/api/room", (req, res) => {
   console.log("Creating a new room");
   
-  const roomId = roomService.createRoom();
-  res.json({ roomId });
+  const newRoom = roomService.createRoom();
+  res.json(newRoom);
 });
 
 app.get("/api/room/:roomId", (req, res) => {
