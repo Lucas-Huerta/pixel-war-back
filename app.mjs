@@ -70,53 +70,82 @@ io.on("connection", (socket) => {
 io.on("connection", (socket) => {
   console.log("User connected");
 
-  // socket.on("joinRoom", (roomId) => {
-  //   socket.join(roomId);
-  //   console.log(`User joined room: ${roomId}`);
-  // });
-
-  socket.on("leaveRoom", (roomId) => {
-    socket.leave(roomId);
-    console.log(`User left room: ${roomId}`);
-  });
-
-  // WIP test
-  socket.on("getRoomUsers", (roomId) => {
-    if (!roomId) {
-      console.log("No roomId provided");
-      return;
-    }
-    const room = io.sockets.adapter.rooms.get(roomId);
-
+  // Gestion des rooms et des joueurs
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    socket.data.roomId = roomId; // Stocker l'ID de la room dans les données du socket
     
-    const users = room ? Array.from(room) : [];
-    
-    const roomData = {
-      roomId: roomId,
-      users: users,
-      totalUsers: users.length
+    const player = {
+      id: socket.id,
+      name: socket.data.username,
+      position: { x: 400, y: 300 }, // Position initiale
+      character: socket.data.character || 0,
+      team: socket.data.team || null,
+      color: socket.data.team === 1 ? 0xff0000 : 0x0000ff // Couleur selon l'équipe
     };
-    
-    socket.emit("roomUsers", roomData);
+
+    // Notifier les autres joueurs
+    socket.to(roomId).emit("player:joined", player);
+
+    // Envoyer la mise à jour à tous les joueurs
+    const roomPlayers = getRoomPlayers(roomId);
+    io.to(roomId).emit("room:playersUpdate", roomPlayers);
+
+    const roomData = roomService.getRoom(roomId);
+    io.to(roomId).emit("room:update", roomData);
   });
 
-  // socket.on("joinRoom", (roomId) => {
-  //   socket.join(roomId);
-  //   const player = {
-  //     id: socket.id,
-  //     name: socket.data.username, // Assurez-vous d'avoir stocké le username quelque part
-  //     teamId: null
-  //   };
+  socket.on("joinTeam", (roomId, teamName) => {
+    socket.data.team = parseInt(teamName.replace('team', '')); // Extraire le numéro d'équipe
+    socket.data.color = socket.data.team === 1 ? 0xff0000 : 0x0000ff;
     
-  //   // Notifier tous les autres joueurs dans la room
-  //   socket.to(roomId).emit("player:joined", player);
+    io.to(roomId).emit("teamJoined", {
+      playerId: socket.id,
+      teamName,
+      color: socket.data.color
+    });
+  });
+
+  socket.on("startGame", (roomId) => {
+    const room = roomService.startGame(roomId);
+    const players = getRoomPlayers(roomId).map(player => ({
+      ...player,
+      position: { x: 400, y: 300 },
+      color: player.team === 1 ? 0xff0000 : 0x0000ff
+    }));
+
+    io.to(roomId).emit("gameStarted", roomId);
+    io.to(roomId).emit("players:update", players);
+  });
+
+  // Gestion des mouvements et des tuiles
+  socket.on("player:move", ({ roomId, position, playerId }) => {
+    // Mettre à jour la position du joueur
+    roomService.updatePlayerPosition(roomId, playerId, position);
     
-  //   // Envoyer la mise à jour complète à tous les joueurs
-  //   const roomPlayers = getRoomPlayers(roomId); // Créez cette fonction pour récupérer tous les joueurs
-  //   io.to(roomId).emit("room:playersUpdate", roomPlayers);
-  // });
-  
-  // Fonction helper pour récupérer tous les joueurs d'une room
+    // Émettre la position à tous les autres joueurs de la room
+    socket.to(roomId).emit("player:moved", { 
+      playerId,
+      position,
+      character: socket.data.character,
+      color: socket.data.color
+    });
+  });
+
+  socket.on("tile:update", ({ roomId, x, y, color, playerId }) => {
+    // Stocker la mise à jour de la tuile
+    roomService.updateTile(roomId, x, y, color, playerId);
+    
+    // Émettre la mise à jour aux autres joueurs
+    socket.to(roomId).emit("tile:updated", {
+      x,
+      y,
+      color,
+      playerId
+    });
+  });
+
+  // Helper pour récupérer les joueurs d'une room
   function getRoomPlayers(roomId) {
     const room = io.sockets.adapter.rooms.get(roomId);
     if (!room) return [];
@@ -126,100 +155,25 @@ io.on("connection", (socket) => {
       return {
         id: socketId,
         name: socket.data.username,
-        teamId: socket.data.teamId || null
+        team: socket.data.team,
+        character: socket.data.character,
+        color: socket.data.team === 1 ? 0xff0000 : 0x0000ff,
+        position: socket.data.position || { x: 400, y: 300 }
       };
     });
   }
 
-  // socket.on("getRooms", () => {
-  //   const rooms = io.sockets.adapter.rooms;
-    
-  //   socket.emit("allRooms", rooms);
-  // });
-
-  socket.on("joinTeam", (roomId, teamName) => {
-    console.log("joinTeam", roomId, teamName);
-    
-    io.to(roomId).emit("teamJoined", teamName);
-    console.log(`User joined team: ${teamName}`);
-  });
-
-  socket.on("startGame", (roomId) => {
-    io.to(roomId).emit("gameStarted");
-  });
-
-  socket.on("endGame", (roomId) => {
-    io.to(roomId).emit("gameEnded");
-  });
-
+  // Gestion de la déconnexion
   socket.on("disconnect", () => {
-    console.log("User disconnected");
-  });
-
-  // Gestion de la grille
-  socket.on("grid:request", () => {
-    const grid = gameController.getGrid();
-    socket.emit("grid:request", grid);
-  });
-
-  socket.on("pixel:update", (pixelUpdate) => {
-    gameController.updatePixel(pixelUpdate);
-    io.emit("pixel:update", pixelUpdate);
-  });
-
-  // Gestion des rooms
-  socket.on("joinRoom", (roomId) => {
-    socket.join(roomId);
-    const player = {
-      id: socket.id,
-      name: socket.data.username,
-      position: { x: 0, y: 0 }
-    };
-    socket.to(roomId).emit("player:joined", player);
-    
-    const roomData = roomService.getRoom(roomId);
-    io.to(roomId).emit("room:update", roomData);
-  });
-
-  socket.on("room:leave", (roomId) => {
-    socket.leave(roomId);
-    io.to(roomId).emit("room:update", roomService.getRoom(roomId));
-  });
-
-  socket.on("room:update", ({ roomId, update }) => {
-    const updatedRoom = roomService.updateRoom(roomId, update);
-    io.to(roomId).emit("room:update", updatedRoom);
-  });
-
-  socket.on("player:move", ({ roomId, position, playerId }) => {
-    // Stocke la position du joueur
-    const player = {
-      id: playerId,
-      position: position,
-      character: socket.data.character
-    };
-    
-    // Met à jour la position dans le service
-    roomService.updatePlayerPosition(roomId, playerId, position);
-    
-    // Émet la nouvelle position à tous les joueurs de la room sauf l'émetteur
-    socket.to(roomId).emit("player:moved", { playerId, position });
-  });
-
-  socket.on("getRooms", () => {
-    const rooms = roomService.getAllRooms();
-    socket.emit("allRooms", rooms);
-  });
-
-  socket.on("startGame", (roomId) => {
-    const room = roomService.startGame(roomId);
-    io.to(roomId).emit("gameStarted", roomId);
-    io.to(roomId).emit("room:update", room);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected");
-    // Mettre à jour les rooms où le joueur était présent
+    const roomId = socket.data.roomId;
+    if (roomId) {
+      // Informer les autres joueurs
+      socket.to(roomId).emit("player:left", socket.id);
+      
+      // Mettre à jour la liste des joueurs
+      const remainingPlayers = getRoomPlayers(roomId);
+      io.to(roomId).emit("room:playersUpdate", remainingPlayers);
+    }
   });
 });
 
