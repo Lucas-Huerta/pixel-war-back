@@ -80,14 +80,66 @@ io.on("connection", (socket) => {
 
   // WIP test
   socket.on("getRoomUsers", (roomId) => {
-    const users = io.sockets.adapter.rooms.get(roomId);
-    const userCount = users ? users.size : 0;
-    socket.emit("roomUsers", { roomId, userCount });
+    if (!roomId) {
+      console.log("No roomId provided");
+      return;
+    }
+    const room = io.sockets.adapter.rooms.get(roomId);
+
+    
+    const users = room ? Array.from(room) : [];
+    
+    const roomData = {
+      roomId: roomId,
+      users: users,
+      totalUsers: users.length
+    };
+    
+    socket.emit("roomUsers", roomData);
   });
+
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    const player = {
+      id: socket.id,
+      name: socket.data.username, // Assurez-vous d'avoir stocké le username quelque part
+      teamId: null
+    };
+    
+    // Notifier tous les autres joueurs dans la room
+    socket.to(roomId).emit("player:joined", player);
+    
+    // Envoyer la mise à jour complète à tous les joueurs
+    const roomPlayers = getRoomPlayers(roomId); // Créez cette fonction pour récupérer tous les joueurs
+    io.to(roomId).emit("room:playersUpdate", roomPlayers);
+  });
+  
+  // Fonction helper pour récupérer tous les joueurs d'une room
+  function getRoomPlayers(roomId) {
+    const room = io.sockets.adapter.rooms.get(roomId);
+    if (!room) return [];
+    
+    return Array.from(room).map(socketId => {
+      const socket = io.sockets.sockets.get(socketId);
+      return {
+        id: socketId,
+        name: socket.data.username,
+        teamId: socket.data.teamId || null
+      };
+    });
+  }
 
   socket.on("getRooms", () => {
     const rooms = io.sockets.adapter.rooms;
-    socket.emit("getRooms", rooms);
+    
+    socket.emit("allRooms", rooms);
+  });
+
+  socket.on("joinTeam", (roomId, teamName) => {
+    console.log("joinTeam", roomId, teamName);
+    
+    io.to(roomId).emit("teamJoined", teamName);
+    console.log(`User joined team: ${teamName}`);
   });
 
   socket.on("startGame", (roomId) => {
