@@ -53,6 +53,17 @@ class RoomService {
     // room.players.push(player);
     return true;
   }
+
+  updatePlayerPosition(roomId, playerId, position) {
+    const room = this.rooms.get(roomId);
+    if (!room) return false;
+
+    const player = room.players.find((p) => p && p.id === playerId);
+    if (!player) return false;
+
+    player.position = position;
+    return true;
+  }
   
   getRoom(roomId) {
     return this.rooms.get(roomId);
